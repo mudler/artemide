@@ -18,23 +18,14 @@ func main() {
 
 	for i := range plugin.Hooks {
 		jww.DEBUG.Printf("Registering hooks to eventbus")
-		plugin.Hooks[i].OnStart()
-	}
-
-	for i := range plugin.Recipes {
-		jww.DEBUG.Printf("Registering hooks to eventbus")
-		plugin.Recipes[i].OnStart()
-	}
-
-	for i := range plugin.Hooks {
-		jww.DEBUG.Printf("Registering hooks to eventbus")
 		plugin.Hooks[i].Register(bus)
 	}
+
 	for i := range plugin.Recipes {
 		jww.DEBUG.Printf("Registering recipes to eventbus")
 		plugin.Recipes[i].Register(bus)
 	}
 
-	bus.Publish("artemide:start")
+	bus.Publish("artemide:start") // Emitting artemide:start event thru Recipes and Hooks.
 
 }

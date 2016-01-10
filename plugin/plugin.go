@@ -11,7 +11,6 @@ import (
 // Hook register it's events to the eventbus
 type Hook interface {
 	Register(*evbus.EventBus) // processor gets the workdir and the config file
-	OnStart()
 }
 
 // Recipe is a special type of Hook
