@@ -6,11 +6,12 @@ import (
 	"strings"
 
 	evbus "github.com/asaskevich/EventBus"
+	"github.com/mudler/artemide/pkg/context"
 )
 
 // Hook register it's events to the eventbus
 type Hook interface {
-	Register(*evbus.EventBus) // processor gets the workdir and the config file
+	Register(*evbus.EventBus, *context.Context) // processor gets the workdir and the config file
 }
 
 // Recipe is a special type of Hook

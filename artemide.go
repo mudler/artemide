@@ -2,9 +2,11 @@ package main
 
 import (
 	evbus "github.com/asaskevich/EventBus"
+	jww "github.com/spf13/jwalterweatherman"
+
 	plugin "github.com/mudler/artemide/plugin"
 	_ "github.com/mudler/artemide/plugin/hook/script"
-	jww "github.com/spf13/jwalterweatherman"
+	_ "github.com/mudler/artemide/plugin/recipe/docker"
 )
 
 func main() {
@@ -27,5 +29,8 @@ func main() {
 	}
 
 	bus.Publish("artemide:start") // Emitting artemide:start event thru Recipes and Hooks.
+
+	bus.Publish("artemide:source:docker", docker_image)
+	bus.Publish("artemide:recipe:type", recipe_type)
 
 }
