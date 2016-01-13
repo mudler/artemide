@@ -7,41 +7,42 @@ import (
 
 	log "github.com/spf13/jwalterweatherman"
 
-	"gopkg.in/yaml.v2"
+  "github.com/BurntSushi/toml"
 )
 
-// Config represent the yaml configuration file
-type Config struct {
-	// Firewall_network_rules map[string]Options `yaml:"repository"`
-	Repository            string `yaml:"repository"`
-	RepositoryStripped    string
-	DockerImage           string              `yaml:"docker_image"`
-	DockerSkipPull        bool                `yaml:"docker_skip_pull"`
-	DockerCommit          bool                `yaml:"docker_commit"`
-	Commit                map[string]string   `yaml:"commit"`
-	DockerImageEntrypoint []string            `yaml:"docker_image_entrypoint"`
-	PreProcessor          string              `yaml:"preprocessor"`
-	Provisioner           map[string][]string `yaml:"provisioner"`
-	PostProcessor         []string            `yaml:"postprocessors"`
-	PollTime              int                 `yaml:"polltime"`
-	Artifacts             string              `yaml:"artifacts_dir"`
-	SeparateArtifacts     bool                `yaml:"separate_artifacts"`
-	LogDir                string              `yaml:"log_dir"`
-	LogPerm               int                 `yaml:"logfile_perm"`
-	Env                   []string            `yaml:"env"`
-	Args                  []string            `yaml:"args"`
-	TmpDir                string              `yaml:"tmpdir"`
-	Volumes               []string            `yaml:"volumes"`
-	WorkDir               string
+type tomlConfig struct {
+	Env   []string
+  VendorString   string
+	Source source `toml:"source"`
+	Artifacts artifact `toml:"artifact"`
 }
 
-//type Options struct {
-//   Src string
-//   Dst string
-//}
+type source struct {
+	Name string
+	Org  string `toml:"organization"`
+	Bio  string
+	DOB  time.Time
+}
 
-// LoadConfig generate a Config from the given yaml file path
-func LoadConfig(f string) (Config, error) {
+type database struct {
+	Server  string
+	Ports   []int
+	ConnMax int `toml:"connection_max"`
+	Enabled bool
+}
+
+type server struct {
+	IP string
+	DC string
+}
+
+type artifact struct {
+Events map[string]server
+}
+
+
+
+func LoadConfig(f string) (tomlConfig, error) {
 
 	filename, _ := filepath.Abs(f)
 	yamlFile, err := ioutil.ReadFile(filename)
@@ -50,18 +51,24 @@ func LoadConfig(f string) (Config, error) {
 		panic(err)
 	}
 
-	var config Config
-	config.SeparateArtifacts = false
-	config.PollTime = 5
-	config.LogPerm = int(0644)
-	config.Artifacts = "/tmp"
-	config.TmpDir = "/var/tmp/boson/"
-	config.DockerSkipPull = false
-	err = yaml.Unmarshal(yamlFile, &config)
+  var config tomlConfig
+	if _, err := toml.DecodeFile(f, &config); err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	r, _ := regexp.Compile(`^.*?\/\/`)
-	config.RepositoryStripped = r.ReplaceAllString(config.Repository, "")
-	config.WorkDir = config.TmpDir + config.RepositoryStripped
+	fmt.Printf("Title: %s\n", config.Title)
+	fmt.Printf("Owner: %s (%s, %s), Born: %s\n",
+		config.Owner.Name, config.Owner.Org, config.Owner.Bio,
+		config.Owner.DOB)
+	fmt.Printf("Database: %s %v (Max conn. %d), Enabled? %v\n",
+		config.DB.Server, config.DB.Ports, config.DB.ConnMax,
+		config.DB.Enabled)
+	for serverName, server := range config.Servers {
+		fmt.Printf("Server: %s (%s, %s)\n", serverName, server.IP, server.DC)
+	}
+	fmt.Printf("Client data: %v\n", config.Clients.Data)
+	fmt.Printf("Client hosts: %v\n", config.Clients.Hosts)
 
 	if config.DockerImage == "" {
 		log.ERROR.Print("You need to specify a Docker image 'docker_image'")
@@ -76,7 +83,7 @@ func LoadConfig(f string) (Config, error) {
 
 	log.INFO.Printf("PreProcessor: %#v\n", config.PreProcessor)
 	log.INFO.Printf("Log Directory: %#v\n", config.LogDir)
-	log.INFO.Printf("Log Permissions: %#v\n", config.LogPerm)
+	log.INFO.Printf("Log Permissions: %#v\n", config.LogPerm)tomlConfig
 	log.INFO.Printf("Poll Time: %#v\n", config.PollTime)
 
 	return config, err
