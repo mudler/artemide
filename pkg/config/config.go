@@ -1,10 +1,7 @@
 package config
 
 import (
-	"fmt"
-	"io/ioutil"
 	"path/filepath"
-	"time"
 
 	log "github.com/spf13/jwalterweatherman"
 
@@ -13,77 +10,50 @@ import (
 
 type tomlConfig struct {
 	Env          []string
-	VendorString string
-	Source       source   `toml:"source"`
-	Artifacts    artifact `toml:"artifact"`
+	VendorString string              `toml:"vendor"`
+	Source       source              `toml:"source"`
+	Artifacts    map[string]artifact `toml:"artifact"`
 }
 
 type source struct {
-	Name string
-	Org  string `toml:"organization"`
-	Bio  string
-	DOB  time.Time
+	Type  string
+	Image string
 }
 
-type database struct {
-	Server  string
-	Ports   []int
-	ConnMax int `toml:"connection_max"`
-	Enabled bool
-}
-
-type server struct {
-	IP string
-	DC string
+type event struct {
+	ActionType string `toml:"action_type"` // script
+	Action     string `toml:"action"`
+	Name       string `toml:"name"`
 }
 
 type artifact struct {
-	Events map[string]server
+	Recipe        []string
+	Destination   string
+	checksum_type []string
+	Events        map[string]event `toml:"event"`
 }
 
 func LoadConfig(f string) (tomlConfig, error) {
 
 	filename, _ := filepath.Abs(f)
-	yamlFile, err := ioutil.ReadFile(filename)
-
-	if err != nil {
-		panic(err)
-	}
-
+	var err error
 	var config tomlConfig
-	if _, err := toml.DecodeFile(f, &config); err != nil {
-		fmt.Println(err)
-		return
+	if _, err = toml.DecodeFile(filename, &config); err != nil {
+		log.ERROR.Fatal(err)
+		return config, err
 	}
 
-	fmt.Printf("Title: %s\n", config.Title)
-	fmt.Printf("Owner: %s (%s, %s), Born: %s\n",
-		config.Owner.Name, config.Owner.Org, config.Owner.Bio,
-		config.Owner.DOB)
-	fmt.Printf("Database: %s %v (Max conn. %d), Enabled? %v\n",
-		config.DB.Server, config.DB.Ports, config.DB.ConnMax,
-		config.DB.Enabled)
-	for serverName, server := range config.Servers {
-		fmt.Printf("Server: %s (%s, %s)\n", serverName, server.IP, server.DC)
-	}
-	fmt.Printf("Client data: %v\n", config.Clients.Data)
-	fmt.Printf("Client hosts: %v\n", config.Clients.Hosts)
+	log.INFO.Printf("Vendor: %s\n", config.VendorString)
+	log.INFO.Printf("Source Type: %s\n", config.Source.Type)
+	log.INFO.Printf("Source Image: %s\n", config.Source.Image)
 
-	if config.DockerImage == "" {
-		log.ERROR.Println("You need to specify a Docker image 'docker_image'")
-	}
-	if config.LogDir == "" {
-		log.ERROR.Println("You need to specify a Log directory 'log_dir'")
-	}
-	log.INFO.Printf("GIT Repository: %#v\n", config.Repository)
-	log.INFO.Printf("Docker Image: %#v\n", config.DockerImage)
-	log.INFO.Printf("Artifacts directory: %#v\n", config.Artifacts)
-	log.INFO.Printf("Separate Artifacts by commit: %#v\n", config.SeparateArtifacts)
+	for artifactName, artifact := range config.Artifacts {
+		log.INFO.Printf("Artifact: %s \n", artifactName)
+		for eventsName, event := range artifact.Events {
+			log.INFO.Printf("-> Event %s : (%s %s %s)\n", eventsName, event.Name, event.Action, event.ActionType)
 
-	log.INFO.Printf("PreProcessor: %#v\n", config.PreProcessor)
-	log.INFO.Printf("Log Directory: %#v\n", config.LogDir)
-	log.INFO.Printf("Log Permissions: %#v\n", config.LogPerm)
-	log.INFO.Printf("Poll Time: %#v\n", config.PollTime)
+		}
+	}
 
 	return config, err
 }

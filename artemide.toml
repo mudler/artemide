@@ -1,25 +1,43 @@
 # This is an artemide build configuration file.
 # TOML format
 
-env = ["vendor"]
+#  env = ["vendor"]
 vendor = "Sabayon" # vendor is redefined here, replacing the environment supplied.
-env = ["vendor"] # taking back env setted variable
+# env = ["vendor"] # taking back env setted variable
 
 
 [source]
 type="docker"
-docker_image_name = "sabayon/armhfp" # docker image source name (could be expressed with tag, or whatever)
+image = "sabayon/armhfp" # docker image source name (could be expressed with tag, or whatever)
 
-[artifact]
+[artifact.sdcard]
 recipe = ["sdcard_image"] #type of output artifact
 destination = "WHATEVER"
 checksum_type = ["md5"]
+  [artifact.sdcard.event.loadcard]
+      name = "pre_chroot"
+      action = "scripts/load_bz.sh"
+      action_type = "script"
+  [artifact.sdcard.event.loadcard2]
+      name = "post_chroot"
+      action = "scripts/load_bz.sh"
+      action_type = "script"
 
-  [artifact.events]
-    helpers = ["scripts/"] # copy scripts to the helpers directory, that gets removed AFTER executions of hooks.. that means the event emitted when exiting from chroot.
-    pre_chroot_script = "scripts/whatever.sh" #this script is executed inside the helper directory. helper directory will contains folders declared in the line above
-    inside_chroot_script = "scripts/whatever.sh"
-    post_chroot_script = "scripts/whatever.sh"
-    sdcard_image = [ # the type can enable other event listening
-            after_build_script = "scripts/whatever.sh" # this time whatever is being run on the same directory where it is launched, not in chroot.
-    ]
+
+
+
+# recipe = ["sdcard_image"] #type of output artifact
+# destination = "WHATEVER"
+# checksum_type = ["md5"]
+# [artifact.event]
+#     action = "OK"
+#     action_type = "script"
+#     name = "FUCK"
+#
+#     helpers = ["scripts/"] # copy scripts to the helpers directory, that gets removed AFTER executions of hooks.. that means the event emitted when exiting from chroot.
+#     pre_chroot_script = "scripts/whatever.sh" #this script is executed inside the helper directory. helper directory will contains folders declared in the line above
+#     inside_chroot_script = "scripts/whatever.sh"
+#     post_chroot_script = "scripts/whatever.sh"
+#   #  sdcard_image = [ # the type can enable other event listening
+# #            after_build_script = "scripts/whatever.sh" # this time whatever is being run on the same directory where it is launched, not in chroot.
+# #    ]

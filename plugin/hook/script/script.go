@@ -4,7 +4,6 @@ import (
 	evbus "github.com/asaskevich/EventBus"
 	"github.com/mudler/artemide/pkg/context"
 	plugin "github.com/mudler/artemide/plugin"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 // Script construct the container arguments from the boson file
@@ -16,7 +15,6 @@ func (s *Script) Register(bus *evbus.EventBus, context *context.Context) { //ret
 }
 
 func Hello() {
-	jww.INFO.Printf("Helloooo!!! it is WORKING!")
 }
 
 func init() {
