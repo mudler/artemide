@@ -64,6 +64,14 @@ func main() {
 	bus.Publish("artemide:start") // Emitting artemide:start event thru Recipes and Hooks.
 
 	bus.Publish("artemide:source:"+configuration.Source.Type, configuration.Source.Image)
+
+	for artifactName, artifact := range configuration.Artifacts {
+		jww.INFO.Printf("Artifact: %s \n", artifactName)
+		for _, recipe := range artifact.Recipe {
+			bus.Publish("artemide:artifact:recipe:" + recipe)
+		}
+
+	}
 	//bus.Publish("artemide:recipe:type", recipe_type)
 
 }
