@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	jww.SetStdoutThreshold(jww.LevelInfo)
+	jww.SetStdoutThreshold(jww.LevelDebug)
 
 	var c int
 	var configurationFile string
@@ -52,12 +52,12 @@ func main() {
 	bus := evbus.New()
 
 	for i := range plugin.Hooks {
-		jww.DEBUG.Println("Registering '%v' hook to eventbus", i)
+		jww.DEBUG.Println("Registering", i, "hook to eventbus")
 		plugin.Hooks[i].Register(bus, context)
 	}
 
 	for i := range plugin.Recipes {
-		jww.DEBUG.Println("Registering '%v' recipe to eventbus")
+		jww.DEBUG.Println("Registering", i, "recipe to eventbus")
 		plugin.Recipes[i].Register(bus, context)
 	}
 
