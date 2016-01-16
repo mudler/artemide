@@ -65,7 +65,7 @@ func main() {
 	}
 
 	// Halting if no configuration file is supplied
-	if configurationFile == "1" {
+	if configurationFile == "" {
 		fmt.Println("I can't work without a configuration file")
 		os.Exit(1)
 	}
