@@ -46,16 +46,29 @@ func NewClient(endpoint string) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) Unpack(image string) (bool, error) {
+func (client *Client) Unpack(image string, dirname string) (bool, error) {
 	var err error
 
-	os.MkdirAll(ROOT_FS, 0777)
+	if dirname == "" {
+		dirname = ROOT_FS
+	}
+
+	os.MkdirAll(dirname, 0777)
 
 	filename, err := ioutil.TempFile(os.TempDir(), "artemide")
 	if err != nil {
 		jww.FATAL.Fatal("Couldn't create the temporary file")
 	}
 	os.Remove(filename.Name())
+
+	// Pulling the image
+	jww.INFO.Printf("Pulling the docker image %s\n", image)
+	if err := client.docker.PullImage(docker.PullImageOptions{Repository: image}, docker.AuthConfiguration{}); err != nil {
+		jww.ERROR.Printf("error pulling %s image: %s\n", image, err)
+		return false, err
+	} else {
+		jww.INFO.Println("Image", image, "pulled correctly")
+	}
 
 	History, _ := client.docker.ImageHistory(image)
 
@@ -66,14 +79,6 @@ func (client *Client) Unpack(image string) (bool, error) {
 
 	}
 
-	// Pulling the image
-	jww.INFO.Printf("Pulling the docker image %s\n", image)
-	if err := client.docker.PullImage(docker.PullImageOptions{Repository: image}, docker.AuthConfiguration{}); err != nil {
-		jww.ERROR.Printf("error pulling %s image: %s\n", image, err)
-		return false, err
-	} else {
-		jww.INFO.Println("Image", image, "pulled correctly")
-	}
 	jww.INFO.Println("Creating container")
 	//flatten.Flatten("flat", image)
 
@@ -107,33 +112,33 @@ func (client *Client) Unpack(image string) (bool, error) {
 	writer.Sync()
 
 	writer.Close()
-	jww.INFO.Println("Extracting to", ROOT_FS)
+	jww.INFO.Println("Extracting to", dirname)
 
-	untar(target, ROOT_FS)
+	untar(target, dirname)
 	err = os.Remove(target)
 	if err != nil {
 		jww.ERROR.Println("could not remove temporary file", target)
 	}
-	prepareRootfs()
+	prepareRootfs(dirname)
 
 	return true, err
 }
 
-func prepareRootfs() {
+func prepareRootfs(dirname string) {
 
-	err := os.Remove(ROOT_FS + SEPARATOR + ".dockerenv")
+	err := os.Remove(dirname + SEPARATOR + ".dockerenv")
 	if err != nil {
 		jww.ERROR.Println("could not remove docker env file")
 	}
 
-	err = os.Remove(ROOT_FS + SEPARATOR + ".dockerinit")
+	err = os.Remove(dirname + SEPARATOR + ".dockerinit")
 	if err != nil {
 		jww.ERROR.Println("could not remove docker init file")
 	}
 
 	// Google DNS as default
 	d1 := []byte("nameserver 8.8.8.8\nnameserver 8.8.4.4\n")
-	err = ioutil.WriteFile(ROOT_FS+SEPARATOR+"etc"+SEPARATOR+"resolv.conf", d1, 0644)
+	err = ioutil.WriteFile(dirname+SEPARATOR+"etc"+SEPARATOR+"resolv.conf", d1, 0644)
 
 }
 

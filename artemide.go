@@ -18,15 +18,25 @@ import (
 
 func main() {
 	jww.SetStdoutThreshold(jww.LevelDebug)
-
+	jww.INFO.Println("== Artemide - the docker building system ==")
+	jww.INFO.Println("Engines starting")
 	var c int
 	var configurationFile string
+	var unpackImage string
+	var context *context.Context
+	var outputDir string
+
+	bus := evbus.New()
 	OptErr = 0
 	for {
-		if c = Getopt("c:h"); c == EOF {
+		if c = Getopt("o:u:c:h"); c == EOF {
 			break
 		}
 		switch c {
+		case 'u':
+			unpackImage = OptArg
+		case 'o':
+			outputDir = OptArg
 		case 'c':
 			configurationFile = OptArg
 		case 'h':
@@ -35,22 +45,7 @@ func main() {
 		}
 	}
 
-	if configurationFile == "1" {
-		fmt.Println("I can't work without a configuration file")
-		os.Exit(1)
-	}
-
-	configuration, _ := config.LoadConfig(configurationFile)
-
-	jww.INFO.Printf("%v\n", configuration)
-
-	var context *context.Context
-
-	jww.INFO.Println("== Artemide - the docker building system ==")
-	jww.INFO.Println("Engines starting")
-
-	bus := evbus.New()
-
+	// Register hooks and recipes to the eventbus
 	for i := range plugin.Hooks {
 		jww.DEBUG.Println("Registering", i, "hook to eventbus")
 		plugin.Hooks[i].Register(bus, context)
@@ -61,6 +56,25 @@ func main() {
 		plugin.Recipes[i].Register(bus, context)
 	}
 
+	// unpack mode.
+	if unpackImage != "" && outputDir != "" {
+		// Unpack mode, just unpack the image and exits.
+		jww.INFO.Println("Unpack mode. Unpacking", unpackImage, "to", outputDir)
+		bus.Publish("artemide:source:docker", unpackImage, outputDir)
+		os.Exit(0)
+	}
+
+	// Halting if no configuration file is supplied
+	if configurationFile == "1" {
+		fmt.Println("I can't work without a configuration file")
+		os.Exit(1)
+	}
+
+	configuration, _ := config.LoadConfig(configurationFile)
+
+	jww.INFO.Printf("%v\n", configuration)
+
+	// Starting the bus show!
 	bus.Publish("artemide:start") // Emitting artemide:start event thru Recipes and Hooks.
 
 	bus.Publish("artemide:source:"+configuration.Source.Type, configuration.Source.Image)
