@@ -16,22 +16,22 @@ type tomlConfig struct {
 }
 
 type source struct {
-	Type  string
-	Image string
+	Type  string `toml:"type"`
+	Image string `toml:"image"`
 }
 
 type event struct {
-	ActionType string `toml:"action_type"` // script
-	Action     string `toml:"action"`
-	Name       string `toml:"name"`
+	Action string `toml:"action"`
+	Name   string `toml:"name"`
 }
 
 type artifact struct {
-	Recipe        []string
 	Destination   string
 	checksum_type []string
-	Events        map[string]event `toml:"event"`
+	Recipe        map[string]events
 }
+
+type events map[string]event
 
 func LoadConfig(f string) (tomlConfig, error) {
 
@@ -49,8 +49,12 @@ func LoadConfig(f string) (tomlConfig, error) {
 
 	for artifactName, artifact := range config.Artifacts {
 		log.INFO.Printf("Artifact: %s \n", artifactName)
-		for eventsName, event := range artifact.Events {
-			log.INFO.Printf("-> Event %s : (%s %s %s)\n", eventsName, event.Name, event.Action, event.ActionType)
+		for recipeName, recipe := range artifact.Recipe {
+			log.INFO.Printf("-> Recipe %s <-\n", recipeName)
+
+			for eventsName, event := range recipe {
+				log.INFO.Printf("-> Event %s : (%s.%s)\n", eventsName, event.Name, event.Action)
+			}
 
 		}
 	}

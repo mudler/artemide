@@ -1,25 +1,29 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 
 	evbus "github.com/asaskevich/EventBus"
 	. "github.com/mattn/go-getopt"
-	jww "github.com/spf13/jwalterweatherman"
+	log "github.com/spf13/jwalterweatherman"
 
 	config "github.com/mudler/artemide/pkg/config"
 	"github.com/mudler/artemide/pkg/context"
 	plugin "github.com/mudler/artemide/plugin"
 
-	_ "github.com/mudler/artemide/plugin/hook/script"
 	_ "github.com/mudler/artemide/plugin/recipe/docker"
+	_ "github.com/mudler/artemide/plugin/recipe/script"
 )
 
 func main() {
-	jww.SetStdoutThreshold(jww.LevelDebug)
-	jww.INFO.Println("== Artemide - the docker building system ==")
-	jww.INFO.Println("Engines starting")
+	if os.Getenv("DEBUG") == strconv.Itoa(1) {
+		log.SetStdoutThreshold(log.LevelDebug)
+	} else {
+		log.SetStdoutThreshold(log.LevelInfo)
+	}
+	log.INFO.Println("== Artemide - the docker building system ==")
+	log.INFO.Println("Engines starting")
 	var c int
 	var configurationFile string
 	var unpackImage string
@@ -47,44 +51,47 @@ func main() {
 
 	// Register hooks and recipes to the eventbus
 	for i := range plugin.Hooks {
-		jww.DEBUG.Println("Registering", i, "hook to eventbus")
+		log.DEBUG.Println("Registering", i, "hook to eventbus")
 		plugin.Hooks[i].Register(bus, context)
 	}
 
 	for i := range plugin.Recipes {
-		jww.DEBUG.Println("Registering", i, "recipe to eventbus")
+		log.DEBUG.Println("Registering", i, "recipe to eventbus")
 		plugin.Recipes[i].Register(bus, context)
 	}
+
+	// Starting the bus show!
+	bus.Publish("artemide:start") // Emitting artemide:start event thru Recipes and Hooks.
 
 	// unpack mode.
 	if unpackImage != "" && outputDir != "" {
 		// Unpack mode, just unpack the image and exits.
-		jww.INFO.Println("Unpack mode. Unpacking", unpackImage, "to", outputDir)
+		log.INFO.Println("Unpack mode. Unpacking", unpackImage, "to", outputDir)
 		bus.Publish("artemide:source:docker", unpackImage, outputDir)
 		os.Exit(0)
 	}
 
 	// Halting if no configuration file is supplied
 	if configurationFile == "" {
-		fmt.Println("I can't work without a configuration file")
-		os.Exit(1)
+		log.ERROR.Fatalln("I can't work without a configuration file")
 	}
 
 	configuration, _ := config.LoadConfig(configurationFile)
 
-	jww.INFO.Printf("%v\n", configuration)
+	log.DEBUG.Printf("%v\n", configuration)
 
-	// Starting the bus show!
-	bus.Publish("artemide:start") // Emitting artemide:start event thru Recipes and Hooks.
-
-	bus.Publish("artemide:source:"+configuration.Source.Type, configuration.Source.Image)
+	//bus.Publish("artemide:source:"+configuration.Source.Type, configuration.Source.Image)
 
 	for artifactName, artifact := range configuration.Artifacts {
-		jww.INFO.Printf("Artifact: %s \n", artifactName)
-		for _, recipe := range artifact.Recipe {
-			bus.Publish("artemide:artifact:recipe:" + recipe)
+		log.DEBUG.Printf("Artifact: %s \n", artifactName)
+		for recipeName, recipe := range artifact.Recipe {
+			log.DEBUG.Printf("Signaling -> Recipe %s <- to bus\n", recipeName)
+			bus.Publish("artemide:artifact:recipe:" + recipeName)
+			for eventsName, event := range recipe {
+				log.DEBUG.Printf("Signaling -> Event %s : (%s.%s)\n", eventsName, event.Name, event.Action)
+				//bus.Publish("artemide:artifact:recipe:"+recipeName+":event:"+event.Name, event.Action)
+			}
 		}
-
 	}
 	//bus.Publish("artemide:recipe:type", recipe_type)
 

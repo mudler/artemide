@@ -11,17 +11,15 @@ type="docker"
 image = "sabayon/armhfp" # docker image source name (could be expressed with tag, or whatever)
 
 [artifact.sdcard]
-recipe = ["sdcard_image"] #type of output artifact
 destination = "WHATEVER"
 checksum_type = ["md5"]
-  [artifact.sdcard.event.loadcard]
-      name = "pre_chroot"
+[artifact.sdcard.recipe]
+  [artifact.sdcard.recipe.script.eventloadcard]
+      name = "after_unpack"
       action = "scripts/load_bz.sh"
-      action_type = "script"
-  [artifact.sdcard.event.loadcard2]
-      name = "post_chroot"
+  [artifact.sdcard.recipe.script.eventloadcard2]
+      name = "after_unpack"
       action = "scripts/load_bz.sh"
-      action_type = "script"
 
 
 

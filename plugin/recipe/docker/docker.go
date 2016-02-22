@@ -75,7 +75,7 @@ func (client *Client) Unpack(image string, dirname string) (bool, error) {
 	for i := len(History) - 1; i >= 0; i-- {
 		layer := History[i]
 		layerCreated := time.Unix(layer.Created, 0)
-		jww.INFO.Println("Layer ", layer.ID, layerCreated)
+		jww.DEBUG.Println("Layer ", layer.ID, layerCreated)
 
 	}
 
@@ -98,7 +98,7 @@ func (client *Client) Unpack(image string, dirname string) (bool, error) {
 	//squashImage(container.ID, "artemide")
 
 	target := fmt.Sprintf("%s.tar", filename.Name())
-	jww.INFO.Printf("Writing to target %s\n", target)
+	jww.DEBUG.Printf("Writing to target %s\n", target)
 	writer, err := os.Create(target)
 	if err != nil {
 		return false, err
@@ -143,7 +143,7 @@ func prepareRootfs(dirname string) {
 }
 
 func Start() {
-	jww.INFO.Printf("[recipe] Docker is available")
+	jww.DEBUG.Printf("[recipe] Docker is available")
 }
 
 func squashImage(container string, newimage string) string {
