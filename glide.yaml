@@ -5,3 +5,9 @@ import:
   - package: github.com/spf13/jwalterweatherman
   - package: github.com/asaskevich/EventBus
   - package: github.com/fsouza/go-dockerclient
+  - package: github.com/mattn/go-getopt
+  - package: github.com/mudler/artemide/pkg/config
+  - package: github.com/mudler/artemide/pkg/context
+  - package: github.com/mudler/artemide/plugin
+  - package: github.com/mudler/artemide/plugin/recipe/docker
+  - package: github.com/mudler/artemide/plugin/recipe/script
