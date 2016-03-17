@@ -45,6 +45,7 @@ func main() {
 			configurationFile = OptArg
 		case 'h':
 			println("usage: " + os.Args[0] + " [-c config.toml -h]")
+			println("to just extract a docker image: " + os.Args[0] + " -u docker/image -o /my/uncompressed_rootfs")
 			os.Exit(1)
 		}
 	}
