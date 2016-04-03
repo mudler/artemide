@@ -1,12 +1,21 @@
 package chroot
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"syscall"
 
+	"golang.org/x/sys/unix"
+
+	fp "path/filepath"
+
+	"github.com/Masterminds/cookoo/log"
+	"github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/fileutils"
 	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/docker/docker/pkg/mount"
+	"github.com/mudler/artemide/pkg/errwrap"
 	"github.com/mudler/artemide/pkg/osutil"
 )
 
@@ -23,7 +32,7 @@ var keepCaps = map[uint]bool{
 func Run(rootDir string, commands []string, files []string, bind []string, robind []string, nodropcaps bool) error {
 
 	if !osutil.ExistsDir(rootDir) {
-		return jww.FATAL.Errorf("No such directory %s:", rootDir)
+		return fmt.Errorf("No such directory %s:", rootDir)
 	}
 
 	var err error
@@ -31,12 +40,12 @@ func Run(rootDir string, commands []string, files []string, bind []string, robin
 
 	// if group := c.String("group"); group != "" {
 	// 	if gid, err = osutil.LookupGroup(group); err != nil {
-	// 		return jww.FATAL.Errorf("Failed to lookup group:", err)
+	// 		return fmt.Errorf("Failed to lookup group:", err)
 	// 	}
 	// }
 	// if user := c.String("user"); user != "" {
 	// 	if uid, err = osutil.LookupUser(user); err != nil {
-	// 		return jww.FATAL.Errorf("Failed to lookup user:", err)
+	// 		return fmt.Errorf("Failed to lookup user:", err)
 	// 	}
 	// }
 
@@ -44,65 +53,65 @@ func Run(rootDir string, commands []string, files []string, bind []string, robin
 	for _, f := range files {
 		srcFile, destFile := fp.Join("/", f), fp.Join(rootDir, f)
 		if err := osutil.Cp(srcFile, destFile); err != nil {
-			return jww.FATAL.Errorf("Failed to copy %s:", f, err)
+			return fmt.Errorf("Failed to copy %s:", f, err)
 		}
 		if err := os.Lchown(destFile, uid, gid); err != nil {
-			return jww.FATAL.Errorf("Failed to lchown %s:", f, err)
+			return fmt.Errorf("Failed to lchown %s:", f, err)
 		}
 	}
 
 	// mount -t proc none {{rootDir}}/proc
 	if err := mount.Mount("none", fp.Join(rootDir, "/proc"), "proc", ""); err != nil {
-		return jww.FATAL.Errorf("Failed to mount /proc: %s", err)
+		return fmt.Errorf("Failed to mount /proc: %s", err)
 	}
 	// mount --rbind /sys {{rootDir}}/sys
 	if err := mount.Mount("/sys", fp.Join(rootDir, "/sys"), "none", "rbind"); err != nil {
-		return jww.FATAL.Errorf("Failed to mount /sys: %s", err)
+		return fmt.Errorf("Failed to mount /sys: %s", err)
 	}
 
 	for _, dir := range bind {
 		if err := bindMount(dir, rootDir, false); err != nil {
-			return jww.FATAL.Errorf("Failed to bind mount %s:", dir, err)
+			return fmt.Errorf("Failed to bind mount %s:", dir, err)
 		}
 	}
 	for _, dir := range robind {
 		if err := bindMount(dir, rootDir, true); err != nil {
-			return jww.FATAL.Errorf("Failed to robind mount %s:", dir, err)
+			return fmt.Errorf("Failed to robind mount %s:", dir, err)
 		}
 	}
 
 	// create symlinks
 	if err := osutil.Symlink("../run/lock", fp.Join(rootDir, "/var/lock")); err != nil {
-		return jww.FATAL.Errorf("Failed to symlink lock file:", err)
+		return fmt.Errorf("Failed to symlink lock file:", err)
 	}
 
 	if err := createDevices(rootDir, uid, gid); err != nil {
-		return jww.FATAL.Errorf("Failed to create devices:", err)
+		return fmt.Errorf("Failed to create devices:", err)
 	}
 
-	jww.DEBUG.Println("chroot", rootDir, command)
+	jww.DEBUG.Println("chroot", rootDir, commands)
 
 	if err := syscall.Chroot(rootDir); err != nil {
-		return jww.FATAL.Errorf("Failed to chroot:", err)
+		return fmt.Errorf("Failed to chroot:", err)
 	}
 	if err := syscall.Chdir("/"); err != nil {
-		return jww.FATAL.Errorf("Failed to chdir /:", err)
+		return fmt.Errorf("Failed to chdir /:", err)
 	}
 
 	if !nodropcaps {
 		jww.DEBUG.Println("drop capabilities")
 		if err := osutil.DropCapabilities(keepCaps); err != nil {
-			return jww.FATAL.Errorf("Failed to drop capabilities:", err)
+			return fmt.Errorf("Failed to drop capabilities:", err)
 		}
 	}
 
 	jww.DEBUG.Println("setgid", gid)
 	if err := osutil.Setgid(gid); err != nil {
-		return jww.FATAL.Errorf("Failed to set group %d:", gid, err)
+		return fmt.Errorf("Failed to set group %d:", gid, err)
 	}
 	jww.DEBUG.Println("setuid", uid)
 	if err := osutil.Setuid(uid); err != nil {
-		return jww.FATAL.Errorf("Failed to set user %d:", uid, err)
+		return fmt.Errorf("Failed to set user %d:", uid, err)
 	}
 
 	return osutil.Execv(commands, os.Environ())
@@ -111,8 +120,91 @@ func Run(rootDir string, commands []string, files []string, bind []string, robin
 func Umount(rootDir string) {
 
 	if !osutil.ExistsDir(rootDir) {
-		return jww.FATAL.Errorf("No such directory %s", rootDir)
+		return fmt.Errorf("No such directory %s", rootDir)
 	}
 
 	return osutil.UmountRoot(rootDir)
+}
+
+func bindMount(bindDir string, rootDir string, readonly bool) error {
+	var srcDir, destDir string
+
+	d := strings.SplitN(bindDir, ":", 2)
+	if len(d) < 2 {
+		srcDir = d[0]
+	} else {
+		srcDir, destDir = d[0], d[1]
+	}
+	if destDir == "" {
+		destDir = srcDir
+	}
+
+	ok, err := osutil.IsDirEmpty(srcDir)
+	if err != nil {
+		return err
+	}
+	if ok {
+		if _, err := os.Create(fp.Join(srcDir, ".droot.keep")); err != nil {
+			return errwrap.Wrapf(err, "Failed to create .droot.keep: {{err}}")
+		}
+	}
+
+	containerDir := fp.Join(rootDir, destDir)
+
+	if err := fileutils.CreateIfNotExists(containerDir, true); err != nil { // mkdir -p
+		return errwrap.Wrapff(err, "Failed to create directory: %s: {{err}}", containerDir)
+	}
+
+	ok, err = osutil.IsDirEmpty(containerDir)
+	if err != nil {
+		return err
+	}
+	if ok {
+		log.Debug("bind mount", bindDir, "to", containerDir)
+		if err := mount.Mount(srcDir, containerDir, "none", "bind,rw"); err != nil {
+			return errwrap.Wrapff(err, "Failed to bind mount %s: {{err}}", containerDir)
+		}
+
+		if readonly {
+			log.Debug("robind mount", bindDir, "to", containerDir)
+			if err := mount.Mount(srcDir, containerDir, "none", "remount,ro,bind"); err != nil {
+				return errwrap.Wrapff(err, "Failed to robind mount %s: {{err}}", containerDir)
+			}
+		}
+	}
+
+	return nil
+}
+
+func createDevices(rootDir string, uid, gid int) error {
+	nullDir := fp.Join(rootDir, os.DevNull)
+	if err := osutil.Mknod(nullDir, unix.S_IFCHR|uint32(os.FileMode(0666)), 1*256+3); err != nil {
+		return err
+	}
+
+	if err := os.Lchown(nullDir, uid, gid); err != nil {
+		return errwrap.Wrapff(err, "Failed to lchown %s: {{err}}", nullDir)
+	}
+
+	zeroDir := fp.Join(rootDir, "/dev/zero")
+	if err := osutil.Mknod(zeroDir, unix.S_IFCHR|uint32(os.FileMode(0666)), 1*256+3); err != nil {
+		return err
+	}
+
+	if err := os.Lchown(zeroDir, uid, gid); err != nil {
+		return errwrap.Wrapff(err, "Failed to lchown %s:", zeroDir)
+	}
+
+	for _, f := range []string{"/dev/random", "/dev/urandom"} {
+		randomDir := fp.Join(rootDir, f)
+		if err := osutil.Mknod(randomDir, unix.S_IFCHR|uint32(os.FileMode(0666)), 1*256+9); err != nil {
+			return err
+		}
+
+		if err := os.Lchown(randomDir, uid, gid); err != nil {
+			return errwrap.Wrapff(err, "Failed to lchown %s: {{err}}", randomDir)
+		}
+	}
+
+	return nil
 }

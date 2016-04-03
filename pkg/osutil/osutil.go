@@ -27,6 +27,13 @@ const (
 	mountinfoFormat = "%d %d %d:%d %s %s %s %s"
 )
 
+func Setgid(id int) error {
+	return system.Setgid(id)
+}
+
+func Setuid(id int) error {
+	return system.Setuid(id)
+}
 func bindMount(bindDir string, rootDir string, readonly bool) error {
 	var srcDir, destDir string
 
