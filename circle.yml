@@ -12,10 +12,10 @@ dependencies:
 
 test:
   pre:
-    - go vet ./...
+    - cd "$GOPATH/src/$IMPORT_PATH/";go vet ./...
 
   override:
-    - godep go test ./...
+    - cd "$GOPATH/src/$IMPORT_PATH/";godep go test ./...
 
 deployment:
  release:
@@ -23,5 +23,5 @@ deployment:
    commands:
      - go get github.com/mitchellh/gox
      - go get github.com/tcnksm/ghr
-     - BUILD_DATE=$(date -u '+%Y/%m/%d %H:%M:%S') BUILD_VERSION=$(git describe --tags) gox -ldflags "-X main.Version $BUILD_VERSION -X main.BuildDate $BUILD_DATE" -output "dist/ncd_{{.OS}}_{{.Arch}}"
-     - ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace `git describe --tags` dist/
+     - cd "$GOPATH/src/$IMPORT_PATH/"; BUILD_DATE=$(date -u '+%Y/%m/%d %H:%M:%S') BUILD_VERSION=$(git describe --tags) gox -ldflags "-X main.Version $BUILD_VERSION -X main.BuildDate $BUILD_DATE" -output "dist/ncd_{{.OS}}_{{.Arch}}"
+     - cd "$GOPATH/src/$IMPORT_PATH/"; ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace `git describe --tags` dist/
