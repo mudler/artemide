@@ -28,4 +28,4 @@ deployment:
      - go get github.com/mitchellh/gox
      - go get github.com/tcnksm/ghr
      - cd "$GOPATH/src/$IMPORT_PATH/"; gox -os="linux" -output "dist/artemide_{{.OS}}_{{.Arch}}"
-     - cd "$GOPATH/src/$IMPORT_PATH/";  ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace "$(git describe --tags)" dist/ || true
+     - cd "$GOPATH/src/$IMPORT_PATH/";  ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME "$(git describe --tags)" dist/ || true
