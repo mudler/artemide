@@ -95,8 +95,6 @@ func (client *Client) Unpack(image string, dirname string) (bool, error) {
 		})
 	}(container)
 
-	//squashImage(container.ID, "artemide")
-
 	target := fmt.Sprintf("%s.tar", filename.Name())
 	jww.DEBUG.Printf("Writing to target %s\n", target)
 	writer, err := os.Create(target)
@@ -151,14 +149,6 @@ func Start() {
 	jww.DEBUG.Printf("[recipe] Docker is available")
 }
 
-func squashImage(container string, newimage string) string {
-	cmd := "docker export " + container + "| docker import - " + newimage
-	out, err := exec.Command("bash", "-c", cmd).Output()
-	if err != nil {
-		jww.FATAL.Fatalf("Failed to execute command: %s", cmd)
-	}
-	return string(out)
-}
 func untar(src string, dst string) string {
 
 	// this should be used instead https://github.com/yuuki1/droot/blob/d0a19947ca0ab057d1eb8cfd471ce6863675b64f/archive/util.go#L19
