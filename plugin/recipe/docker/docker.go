@@ -136,6 +136,11 @@ func prepareRootfs(dirname string) {
 		jww.ERROR.Println("could not remove docker init file")
 	}
 
+	err = os.MkdirAll(dirname+SEPARATOR+"dev", 0751)
+	if err != nil {
+		jww.ERROR.Println("could not create dev folder")
+	}
+
 	// Google DNS as default
 	d1 := []byte("nameserver 8.8.8.8\nnameserver 8.8.4.4\n")
 	err = ioutil.WriteFile(dirname+SEPARATOR+"etc"+SEPARATOR+"resolv.conf", d1, 0644)
