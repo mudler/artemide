@@ -26,6 +26,6 @@ deployment:
    branch: master
    commands:
      - go get github.com/mitchellh/gox
-     - go get github.com/tcnksm/ghr
-     - cd "$GOPATH/src/$IMPORT_PATH/"; gox -os="linux" -output "dist/artemide_{{.OS}}_{{.Arch}}"
-     - cd "$GOPATH/src/$IMPORT_PATH/";  ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME "$(git describe --tags)" dist/ || true
+     - cd "$GOPATH/src/$IMPORT_PATH/"; gox -os="linux" -output "release/artemide_{{.OS}}_{{.Arch}}"
+     - cd "$GOPATH/src/$IMPORT_PATH/"; wget https://github.com/progrium/gh-release/releases/download/v2.2.0/gh-release_2.2.0_linux_x86_64.tgz; tar -zcf gh-release_2.2.0_linux_x86_64.tgz; chmod +x gh-release
+     - cd "$GOPATH/src/$IMPORT_PATH/"; ./gh-release create $CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME "$(git describe --tags)" $(shell git rev-parse --abbrev-ref HEAD) || true
